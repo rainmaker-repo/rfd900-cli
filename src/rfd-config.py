@@ -6,7 +6,39 @@ from typing import Optional, Dict, Any
 from modem_client import ModemClient
 from s_registers import SRegisters
 
-# [Previous Enums and ParameterConstraints stay the same]
+
+@dataclass
+class ParameterConstraints:
+    """Constraints for each parameter"""
+    min_val: int
+    max_val: int
+    default_val: int
+    description: str
+    requires_matching: bool  # Must be same at both ends of link
+
+# Parameter constraints from the datasheet
+PARAMETER_CONSTRAINTS: Dict[SRegisters, ParameterConstraints] = {
+    SRegisters.FORMAT: ParameterConstraints(0, 0, 0, "EEPROM version (should not be changed)", False),
+    SRegisters.SERIAL_SPEED: ParameterConstraints(2, 115, 57, "Serial speed (2=2400 ... 115=115200)", False),
+    SRegisters.AIR_SPEED: ParameterConstraints(2, 250, 64, "Air data rate (2-250 kbps)", True),
+    SRegisters.NETID: ParameterConstraints(0, 499, 25, "Network ID", True),
+    SRegisters.TXPOWER: ParameterConstraints(0, 30, 20, "Transmit power in dBm", False),
+    SRegisters.ECC: ParameterConstraints(0, 1, 1, "Error correcting code (0=disabled, 1=enabled)", True),
+    SRegisters.MAVLINK: ParameterConstraints(0, 1, 1, "MAVLink framing (0=disabled, 1=enabled)", False),
+    SRegisters.OP_RESEND: ParameterConstraints(0, 1, 1, "Opportunistic resend (0=disabled, 1=enabled)", False),
+    SRegisters.MIN_FREQ: ParameterConstraints(902000, 927000, 915000, "Min frequency in KHz", True),
+    SRegisters.MAX_FREQ: ParameterConstraints(903000, 928000, 928000, "Max frequency in KHz", True),
+    SRegisters.NUM_CHANNELS: ParameterConstraints(5, 50, 50, "Number of frequency hopping channels", True),
+    SRegisters.DUTY_CYCLE: ParameterConstraints(10, 100, 100, "Transmit duty cycle %", False),
+    SRegisters.LBT_RSSI: ParameterConstraints(0, 1, 0, "Listen before talk threshold (do not change)", True),
+    SRegisters.MANCHESTER: ParameterConstraints(0, 1, 0, "Manchester encoding (do not change)", True),
+    SRegisters.RTSCTS: ParameterConstraints(0, 1, 0, "RTS/CTS flow control (do not change)", False),
+    SRegisters.NODEID: ParameterConstraints(0, 29, 2, "Node ID (0=base node)", False),
+    SRegisters.NODEDESTINATION: ParameterConstraints(0, 65535, 65535, "Remote node ID (65535=broadcast)", False),
+    SRegisters.SYNCANY: ParameterConstraints(0, 1, 0, "Allow sending without base node sync", False),
+    SRegisters.NODECOUNT: ParameterConstraints(2, 30, 3, "Total number of nodes in network", True),
+}
+
 
 class CLI:
     def __init__(self):

@@ -19,3 +19,5 @@ class SRegisters(Enum):
     RTSCTS = 14
     NODEID = 15
     NODEDESTINATION = 16
+    SYNCANY = 17
+    NODECOUNT = 18
