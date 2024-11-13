@@ -1,8 +1,12 @@
 from enum import Enum
+import time
 import click
 import logging
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
+
+import serial
+from serial.tools import list_ports
 from modem_client import ModemClient
 from s_registers import SRegisters
 
@@ -42,11 +46,15 @@ PARAMETER_CONSTRAINTS: Dict[SRegisters, ParameterConstraints] = {
 
 class CLI:
     def __init__(self):
-        self.client: Optional[ModemClient] = None
+        self.client = None
     
     def setup_logging(self, verbose: bool):
         level = logging.DEBUG if verbose else logging.INFO
         logging.basicConfig(level=level)
+    
+    def connect(self, port: str, baud_rate: int, timeout: float):
+        """Initialize connection to modem"""
+        self.client = ModemClient(port, baud_rate, timeout, line_break="\r\n")
     
     def cleanup(self):
         """Cleanup resources"""
@@ -56,8 +64,59 @@ class CLI:
             except Exception as e:
                 logging.debug(f"Error during cleanup: {e}")
 
+def detect_modems(baud_rate: int = 57600, timeout: float = 1.0) -> List[Tuple[str, str]]:
+    """
+    Detect RFD900 modems connected to the system.
+    Returns list of tuples (port_name, version_info)
+    """
+    modems = []
+    
+    # Get list of all serial ports
+    ports = list_ports.comports()
+    
+    for port in ports:
+        try:
+            # Try to connect and enter command mode
+            with serial.Serial(port.device, baud_rate, timeout=timeout) as ser:
+                # Set DTR and wait
+                ser.dtr = True
+                time.sleep(0.1)
+                
+                # Clear buffers
+                ser.reset_input_buffer()
+                ser.reset_output_buffer()
+                
+                # Drop DTR to signal command mode entry
+                ser.dtr = False
+                time.sleep(0.1)
+                
+                # Send test command
+                ser.write(b'ATI\r\n')
+                ser.flush()
+                
+                # Read response
+                response = b''
+                start = time.time()
+                while (time.time() - start) < 1.0:
+                    if ser.in_waiting:
+                        chunk = ser.read(ser.in_waiting)
+                        response += chunk
+                        # Check if it's an RFD modem by looking for typical response patterns
+                        if b'RFD SiK' in response or b'RFD900' in response:
+                            # Clean up the response
+                            version_info = response.decode().strip().split('\r\n')[-1]
+                            modems.append((port.device, version_info))
+                            break
+                    time.sleep(0.1)
+                    
+        except (serial.SerialException, Exception) as e:
+            logging.debug(f"Failed to check port {port.device}: {e}")
+            continue
+            
+    return modems
+
 @click.group()
-@click.option('--port', required=True, help='Serial port of modem')
+@click.option('--port', help='Serial port of modem (optional, will auto-detect if not specified)')
 @click.option('--baud-rate', default=57600, help='Baud rate')
 @click.option('--timeout', default=1.0, help='Timeout in seconds')
 @click.option('--verbose', is_flag=True, help='Enable verbose logging')
@@ -66,9 +125,41 @@ def main(ctx, port, baud_rate, timeout, verbose):
     """RFD900 Radio Modem Configuration Tool"""
     cli = CLI()
     cli.setup_logging(verbose)
+    ctx.obj = cli
+    
     try:
-        cli.client = ModemClient(port, baud_rate, timeout, line_break="\r\n")
-        ctx.obj = cli
+        # If port is not specified, try to auto-detect
+        if not port:
+            modems = detect_modems(baud_rate, timeout)
+            
+            if not modems:
+                click.echo("Error: No RFD900 modems detected", err=True)
+                ctx.exit(1)
+                
+            if len(modems) > 1:
+                click.echo("Multiple RFD900 modems detected:")
+                for i, (port_name, version) in enumerate(modems, 1):
+                    click.echo(f"{i}. Port: {port_name} ({version})")
+                    
+                # Prompt user to choose
+                choice = click.prompt(
+                    "Please choose a modem (1-{}) or 0 to cancel".format(len(modems)),
+                    type=click.IntRange(0, len(modems))
+                )
+                if choice == 0:
+                    ctx.exit(0)
+                port = modems[choice - 1][0]
+            else:
+                port_name, version = modems[0]
+                click.echo(f"Found RFD900 modem on port {port_name} ({version})")
+                if not click.confirm("Would you like to use this modem?"):
+                    ctx.exit(0)
+                port = port_name
+                
+        
+        # Connect to the selected/specified port
+        cli.connect(port, baud_rate, timeout)
+        
     except Exception as e:
         click.echo(f"Error initializing modem: {e}", err=True)
         ctx.exit(1)
@@ -76,6 +167,9 @@ def main(ctx, port, baud_rate, timeout, verbose):
 def get_modem_response(cli: CLI, cmd: str) -> str:
     """Send command and get response, handling command echo"""
     try:
+        if not cli.client:
+            click.echo("Error: Not connected to modem", err=True)
+            return ""
         response = cli.client.send(cmd)
         if not response:
             return ""
@@ -96,6 +190,7 @@ def get_modem_response(cli: CLI, cmd: str) -> str:
 def info(cli: CLI):
     """Display modem information"""
     try:
+        
         # ATI - Version info
         version = get_modem_response(cli, "ATI")
         if version:

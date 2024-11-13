@@ -85,10 +85,10 @@ class ModemClient():
             logging.debug(f"Attempt {attempt + 1} to enter command mode")
             try:
                 with serial.Serial(self.serial_port, self.baud_rate, timeout=2) as ser:
-                    # Set DTR and wait
+                    # Set DTR and wait longer
                     logging.debug("Setting DTR high")
                     ser.dtr = True
-                    time.sleep(0.1)
+                    time.sleep(2)  # Increased from 1s
                     
                     # Clear buffers
                     ser.reset_input_buffer()
@@ -97,17 +97,21 @@ class ModemClient():
                     # Drop DTR to signal command mode entry
                     logging.debug("Dropping DTR")
                     ser.dtr = False
-                    time.sleep(0.1)
+                    time.sleep(2)  # Increased from 1s
                     
-                    # Send test command
-                    logging.debug("Sending test AT command")
-                    ser.write(b'AT\r\n')
-                    ser.flush()
+                    ser.write("+++".encode())
+                    time.sleep(5)
+                    # Send test command multiple times
+                    for _ in range(3):  # Try sending AT command multiple times
+                        logging.debug("Sending test AT command")
+                        ser.write(b'AT\r\n')
+                        ser.flush()
+                        time.sleep(0.5)  # Wait between attempts
                     
-                    # Read response
+                    # Read response with longer timeout
                     response = b''
                     start = time.time()
-                    while (time.time() - start) < 1.0:
+                    while (time.time() - start) < 3.0:  # Increased from 1.0s
                         if ser.in_waiting:
                             chunk = ser.read(ser.in_waiting)
                             logging.debug(f"Received chunk: {chunk!r}")
@@ -124,7 +128,7 @@ class ModemClient():
                 logging.error(f"Serial port error: {e}")
                 continue
             
-            time.sleep(1.0)
+            time.sleep(2.0)  # Increased delay between attempts
         
         logging.error(f"Failed to enter command mode after {max_attempts} attempts")
         return False
