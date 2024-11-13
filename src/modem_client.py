@@ -58,16 +58,7 @@ class ModemClient():
             
             # Join all lines except the last OK/ERROR
             if response:
-                if response[-1] in ['OK', 'ERROR']:
-                    result = '\n'.join(response[:-1])
-                    status = response[-1]
-                    logging.debug(f"Command response: {result}, Status: {status}")
-                    if status == 'ERROR':
-                        raise ATRuntimeError(f"Command '{command}' failed with: {result}")
-                    return result
-                else:
-                    logging.warning(f"Response didn't end with OK/ERROR: {response}")
-                    return '\n'.join(response)
+                return '\n'.join(response)
             
             return ''
             
@@ -81,28 +72,22 @@ class ModemClient():
 
     def enter_command_mode(self, max_attempts=3):
         """Enter AT command mode using DTR control"""
+        print("Switching modem to command mode...")
         for attempt in range(max_attempts):
             logging.debug(f"Attempt {attempt + 1} to enter command mode")
             try:
                 with serial.Serial(self.serial_port, self.baud_rate, timeout=2) as ser:
-                    # Set DTR and wait longer
-                    logging.debug("Setting DTR high")
-                    ser.dtr = True
-                    time.sleep(2)  # Increased from 1s
+               
                     
                     # Clear buffers
                     ser.reset_input_buffer()
                     ser.reset_output_buffer()
                     
-                    # Drop DTR to signal command mode entry
-                    logging.debug("Dropping DTR")
-                    ser.dtr = False
-                    time.sleep(2)  # Increased from 1s
-                    
                     ser.write("+++".encode())
-                    time.sleep(5)
+                    time.sleep(1)
                     # Send test command multiple times
                     for _ in range(3):  # Try sending AT command multiple times
+                        #idk why but this never works on attempt 1 so i do it 3 times
                         logging.debug("Sending test AT command")
                         ser.write(b'AT\r\n')
                         ser.flush()
@@ -117,7 +102,7 @@ class ModemClient():
                             logging.debug(f"Received chunk: {chunk!r}")
                             response += chunk
                             if b'OK' in response or b'RFD SiK' in response:
-                                logging.info("Successfully entered command mode")
+                                print("Successfully entered command mode.")
                                 self.serial = ser
                                 return True
                         time.sleep(0.1)
