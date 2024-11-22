@@ -14,11 +14,11 @@ python rfd_config.py
 python rfd_config.py [OPTIONS]
 
 Options:
-  --port TEXT        Serial port of modem (optional, will auto-detect if not specified)
-  --baud-rate INTEGER  Baud rate (default: 57600)
-  --timeout FLOAT    Timeout in seconds (default: 1.0)
-  --verbose          Enable verbose logging
-  --help            Show this message and exit
+  --port TEXT        #Serial port of modem (optional, will auto-detect if not specified)
+  --baud-rate INTEGER  #Baud rate (default: 57600)
+  --timeout FLOAT    #Timeout in seconds (default: 1.0)
+  --verbose          #Enable verbose logging
+  --help            #Show this message and exit
 ```
 
 ### Interactive Shell Commands
