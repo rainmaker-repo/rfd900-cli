@@ -83,7 +83,7 @@ Available Parameters:
                 response = send_command(ser, "ATI5")
                 click.echo("Updated Modem Parameters:")
                 for line in response:
-                    click.echo("line")
+                    click.echo(line)
             else:
                 click.echo("Unknown command. Type 'help' for a list of commands.")
         except Exception as e:
