@@ -24,6 +24,7 @@ def list_serial_ports():
             "description": port.description,
             "hwid": port.hwid
         }
+        print(device_info)
         port_info.append(device_info)
     
     return port_info
