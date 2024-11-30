@@ -1,79 +1,115 @@
+# RFD900 Configuration Tool
+
+This Python-based interactive CLI tool allows you to configure and retrieve settings from RFD900 modems. The tool provides an easy-to-use interface for managing modem parameters such as `NETID`, `SERIAL_SPEED`, `AIR_SPEED`, and more.
+
+---
+
+## Features
+
+- **List Serial Ports**: Automatically detect available serial ports and connected devices.
+- **Interactive Shell**: Configure and retrieve modem parameters in a user-friendly command mode.
+- **Customizable Settings**: Modify and save modem configurations such as baud rate, frequency ranges, and transmission power.
+- **Save Configurations**: Write changes to the modem's non-volatile memory.
+
+---
+
+## Prerequisites
+
+Before using this tool, ensure you have the following installed:
+
+- Python 3.6 or later
+- [pyserial](https://pypi.org/project/pyserial/)
+- [click](https://pypi.org/project/click/)
+
+To install the dependencies, run:
+
+```bash
+pip install pyserial click
+```
+
+---
 
 ## Usage
 
-### Basic Usage
+### Running the Tool
 
-Run the tool with automatic modem detection:
-```bash
-python rfd_config.py
-```
+1. Save the script as `rfd900_tool.py`.
+2. Make the script executable:
 
-### Command Line Options
+   ```bash
+   chmod +x rfd900_tool.py
+   ```
 
-```bash
-python rfd_config.py [OPTIONS]
+3. Run the script:
 
-Options:
-  --port TEXT          Serial port of modem (optional, will auto-detect if not specified)
-  --baud-rate INTEGER  Baud rate (default: 57600)
-  --timeout FLOAT      Timeout in seconds (default: 1.0)
-  --verbose            Enable verbose logging
-  --help               Show this message and exit
-```
+   ```bash
+   ./rfd900_tool.py
+   ```
 
-### Interactive Shell Commands
+   You can specify a custom baud rate with the `--baudrate` option (default: 57600):
 
-Once connected to a modem, the following commands are available:
+   ```bash
+   ./rfd900_tool.py --baudrate 115200
+   ```
 
-- `info` - Display comprehensive modem information
-- `params` - Show all current parameter values
-- `get PARAMETER` - Get the value of a specific parameter
-- `set PARAMETER VALUE` - Set the value of a specific parameter
-- `factory_reset` - Reset all parameters to factory defaults
-- `reboot` - Reboot the modem
-- `exit` or `quit` - Exit the configuration shell
+---
 
-### Parameters
+### Commands in Interactive Shell
 
-The tool supports configuration of the following parameters:
+Once connected, the tool enters an interactive shell where you can execute the following commands:
 
-| Parameter | Range | Default | Description | Matching Required |
-|-----------|--------|---------|-------------|------------------|
-| FORMAT | 0-0 | 0 | EEPROM version (should not be changed) | No |
-| SERIAL_SPEED | 2-115 | 57 | Serial speed (2=2400 ... 115=115200) | No |
-| AIR_SPEED | 2-250 | 64 | Air data rate (2-250 kbps) | Yes |
-| NETID | 0-499 | 25 | Network ID | Yes |
-| TXPOWER | 0-30 | 20 | Transmit power in dBm | No |
-| ECC | 0-1 | 1 | Error correcting code (0=disabled, 1=enabled) | Yes |
-| MAVLINK | 0-1 | 1 | MAVLink framing (0=disabled, 1=enabled) | No |
-| MIN_FREQ | 902000-927000 | 915000 | Min frequency in KHz | Yes |
-| MAX_FREQ | 903000-928000 | 928000 | Max frequency in KHz | Yes |
-| NUM_CHANNELS | 5-50 | 50 | Number of frequency hopping channels | Yes |
-| DUTY_CYCLE | 10-100 | 100 | Transmit duty cycle % | No |
-| NODEID | 0-29 | 2 | Node ID (0=base node) | No |
-| NODEDESTINATION | 0-65535 | 65535 | Remote node ID (65535=broadcast) | No |
+| Command                          | Description                                                                 |
+|----------------------------------|-----------------------------------------------------------------------------|
+| `set {PARAM} {VALUE}`            | Set a modem parameter (e.g., `set NETID 5`).                                |
+| `get {PARAM}`                    | Retrieve the current value of a parameter (e.g., `get NETID`).              |
+| `params`                         | List all configurable parameters.                                           |
+| `write`                          | Save changes to the modem's non-volatile memory.                            |
+| `help`                           | Display a list of available commands.                                       |
+| `exit` or `quit`                 | Exit the interactive shell and return to normal modem operation.            |
 
-Note: Parameters marked with "Matching Required" must be set to the same value on both modems in a link.
+---
 
-## Example Usage
+### Example Workflow
 
-```bash
-# Start the tool
-$ python rfd_config.py
+1. **List Serial Ports**:
+   The tool will detect available serial ports and prompt you to select one.
 
-# View current modem information
-rfd-config> info
+2. **Enter Command Mode**:
+   The tool automatically sends the `+++` command to enter command mode.
 
-# Check current network ID
-rfd-config> get NETID
+3. **Configure Parameters**:
+   Use the `set` and `get` commands to modify and view parameters.
 
-# Set new network ID
-rfd-config> set NETID 100
+4. **Save Changes**:
+   Run `write` to save your changes to the modem.
 
-# View all parameters
-rfd-config> params
+5. **Exit**:
+   Type `exit` or `quit` to leave the interactive shell.
 
-# Exit the tool
-rfd-config> exit
-```
+---
 
+## Available Parameters
+
+The following parameters can be configured:
+
+- `NETID`
+- `SERIAL_SPEED`
+- `AIR_SPEED`
+- `TXPOWER`
+- `ECC`
+- `MAVLINK`
+- `MIN_FREQ`
+- `MAX_FREQ`
+- `NUM_CHANNELS`
+- `DUTY_CYCLE`
+- `NODEID`
+- `NODEDESTINATION`
+- `SYNCANY`
+- `NODECOUNT`
+
+---
+
+## Error Handling
+
+- If no serial ports are detected, the tool will display a message and exit.
+- If communication with the modem fails, the tool provides descriptive error messages for troubleshooting.
