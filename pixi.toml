@@ -8,4 +8,8 @@ version = "0.1.0"
 
 [tasks]
 
+[dependencies]
+pyserial = ">=3.5,<4"
+click = ">=8.1.7,<9"
+
 
